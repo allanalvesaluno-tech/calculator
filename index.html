@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora Estatística</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    body { font-family: Arial, sans-serif; margin: 10px; background: #f4f4f4; }
+    .container { background: white; padding: 15px; border-radius: 10px; max-width: 100%; margin: auto; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    input, select, button { margin: 5px 0; padding: 10px; width: 100%; font-size: 1rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9rem; }
+    th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+    th { background: #eee; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Calculadora Estatística</h1>
+
+<h3>Dados (separados por vírgula):</h3>
+<input type="text" id="dados" placeholder="Ex: 8, 7, 4, 10">
+<select id="tipo">
+    <option value="amostral">Amostral</option>
+    <option value="populacional">Populacional</option>
+</select>
+<button onclick="calcularEstatisticas()">Calcular Estatísticas</button>
+<div id="resultado"></div>
+
+<hr>
+<h3>Estatísticas com Frequência</h3>
+<label>Valores (xᵢ):</label>
+<input type="text" id="valores" placeholder="Ex: 5, 6, 7">
+<label>Frequências (fᵢ):</label>
+<input type="text" id="frequencias" placeholder="Ex: 2, 3, 5">
+<select id="tipoFreq">
+    <option value="amostral">Amostral</option>
+    <option value="populacional">Populacional</option>
+</select>
+<button onclick="calcularEstatisticasFrequencia()">Calcular com Frequência</button>
+<div id="resultadoFreq"></div>
+
+<hr>
+<h3>Regressão Linear</h3>
+<input type="text" id="xValores" placeholder="Valores X">
+<input type="text" id="yValores" placeholder="Valores Y">
+<button onclick="calcularRegressao()">Calcular Regressão</button>
+<canvas id="grafico" style="max-width: 100%; height: auto;"></canvas>
+</div>
+
+<script>
+function calcularEstatisticas(){
+    let dados = document.getElementById("dados").value.split(",").map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+    if(dados.length === 0){ alert("Insira valores válidos."); return; }
+    let media = dados.reduce((a,b) => a+b, 0) / dados.length;
+    let tipo = document.getElementById("tipo").value;
+    let variancia = dados.map(v => (v - media)**2).reduce((a,b) => a+b, 0) / (tipo === "amostral" ? dados.length - 1 : dados.length);
+    let desvio = Math.sqrt(variancia);
+    let cv = (desvio / media) * 100;
+    document.getElementById("resultado").innerHTML = tabelaResultado(media, variancia, desvio, cv);
+}
+
+function calcularEstatisticasFrequencia(){
+    let valores = document.getElementById("valores").value.split(",").map(v => parseFloat(v.trim()));
+    let freq = document.getElementById("frequencias").value.split(",").map(v => parseFloat(v.trim()));
+    if(valores.length !== freq.length || valores.length === 0){ alert("Listas inválidas."); return; }
+    let somaFi = freq.reduce((a,b) => a+b, 0);
+    let somaXifi = valores.reduce((soma, xi, i) => soma + xi * freq[i], 0);
+    let media = somaXifi / somaFi;
+    let tipo = document.getElementById("tipoFreq").value;
+    let somaFiDesvio = valores.reduce((soma, xi, i) => soma + freq[i] * (xi - media)**2, 0);
+    let variancia = somaFiDesvio / (tipo === "amostral" ? somaFi - 1 : somaFi);
+    let desvio = Math.sqrt(variancia);
+    let cv = (desvio / media) * 100;
+    document.getElementById("resultadoFreq").innerHTML = tabelaResultado(media, variancia, desvio, cv);
+}
+
+function tabelaResultado(media, variancia, desvio, cv){
+    return `<table><tr><th>Média</th><th>Variância</th><th>Desvio Padrão</th><th>CV (%)</th></tr>
+            <tr><td>${media.toFixed(2)}</td><td>${variancia.toFixed(2)}</td><td>${desvio.toFixed(2)}</td><td>${cv.toFixed(2)}</td></tr></table>`;
+}
+
+function calcularRegressao(){
+    let x = document.getElementById("xValores").value.split(",").map(v => parseFloat(v.trim()));
+    let y = document.getElementById("yValores").value.split(",").map(v => parseFloat(v.trim()));
+    if(x.length !== y.length || x.length === 0){ alert("Pares inválidos."); return; }
+    let n = x.length;
+    let mediaX = x.reduce((a,b) => a+b, 0) / n;
+    let mediaY = y.reduce((a,b) => a+b, 0) / n;
+    let num = 0, den = 0;
+    for(let i=0; i<n; i++){ num += (x[i] - mediaX) * (y[i] - mediaY); den += (x[i] - mediaX)**2; }
+    let b1 = num / den;
+    let b0 = mediaY - b1 * mediaX;
+    let yPred = x.map(xi => b0 + b1*xi);
+    new Chart(document.getElementById("grafico"), {
+        type: 'scatter',
+        data: { datasets: [{ label: 'Pontos', data: x.map((xi,i)=>({x:xi,y:y[i]})), backgroundColor: 'blue' }, { label: 'Reta', type: 'line', data: x.map((xi,i)=>({x:xi,y:yPred[i]})), borderColor: 'red', fill:false }] },
+        options: { responsive: true, scales: { x: { type: 'linear', position: 'bottom' } } }
+    });
+    alert(`Equação: Y = ${b0.toFixed(2)} + ${b1.toFixed(2)}X`);
+}
+</script>
+</body>
+</html>
